@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Overenie Emailu</title>
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f7f7f7;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 500px;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        label {
+            display: block;
+            margin: 10px 0 5px;
+            font-weight: bold;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0 20px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .form-section {
+            display: none;
+        }
+        .form-section.active {
+            display: block;
+        }
+    </style>
+    <script>
+        emailjs.init("OXpNqE7ji-RO9UA4H"); // Nahradiť tvojím Public Key
+
+        // Funkcia na generovanie unikátneho kľúča
+        function generateKey() {
+            const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+            let key = "";
+            for (let i = 0; i < 10; i++) {
+                key += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return key;
+        }
+
+        // Funkcia na odoslanie overovacieho emailu
+        function sendVerificationEmail() {
+            const email = document.getElementById("emailInput").value;
+            const key = generateKey();  // Generovanie unikátneho kľúča
+
+            // Uloženie údajov do LocalStorage, bez expirácie, aby email ostal aktívny
+            localStorage.setItem(email, JSON.stringify({ key, verified: false }));
+
+            // Poslanie e-mailu cez EmailJS
+            emailjs.send("service_na07e55", "template_g754mpf", {
+                to_email: email,
+                key: key
+            }).then(response => {
+                console.log('SUCCESS:', response);
+                alert("Overovací email bol odoslaný. Skontrolujte svoj inbox.");
+                document.getElementById('sendForm').classList.remove('active');
+                document.getElementById('verifyForm').classList.add('active');
+            }).catch(error => {
+                console.error("FAILED:", error);
+                alert("Nastala chyba pri odosielaní emailu.");
+            });
+        }
+
+        // Funkcia na overenie kódu
+        function verifyEmail() {
+            const email = document.getElementById("verifyEmailInput").value;
+            const enteredKey = document.getElementById("verifyKeyInput").value;
+            const storedData = localStorage.getItem(email);
+
+            if (!storedData) {
+                alert("Emailová adresa neexistuje alebo už bola vymazaná.");
+                return;
+            }
+
+            const { key, verified } = JSON.parse(storedData);
+
+            if (enteredKey === key) {
+                alert("Email bol úspešne overený.");
+                localStorage.setItem(email, JSON.stringify({ key, verified: true }));
+
+                // Vymazanie emailu po overení
+                setTimeout(() => {
+                    localStorage.removeItem(email);
+                    console.log(`Email ${email} bol odstránený z LocalStorage po overení.`);
+                }, 60000); // Vymazanie po 1 minúte po úspešnom overení
+            } else {
+                alert("Zadaný kód je nesprávny. Skontrolujte kód a skúste to znova.");
+            }
+        }
+
+        // Automatické čistenie LocalStorage pre neoverené emaily, ak email vyprší
+        setInterval(() => {
+            const now = new Date().getTime();
+            for (let key in localStorage) {
+                try {
+                    const { verified } = JSON.parse(localStorage.getItem(key));
+                    if (!verified) {
+                        console.log(`Email ${key} čaká na overenie.`);
+                    }
+                } catch (e) {}
+            }
+        }, 60000);  // Prechádza každú minútu
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h1>Overenie Emailu</h1>
+
+        <!-- Formulár na odoslanie overovacieho e-mailu -->
+        <div id="sendForm" class="form-section active">
+            <form onsubmit="event.preventDefault(); sendVerificationEmail();">
+                <label for="emailInput">Zadajte email:</label>
+                <input type="email" id="emailInput" required placeholder="Váš email">
+                <button type="submit">Odoslať Overovací Email</button>
+            </form>
+        </div>
+
+        <!-- Formulár na overenie e-mailu a kódu -->
+        <div id="verifyForm" class="form-section">
+            <form onsubmit="event.preventDefault(); verifyEmail();">
+                <label for="verifyEmailInput">Emailová adresa:</label>
+                <input type="email" id="verifyEmailInput" required placeholder="Váš email">
+
+                <label for="verifyKeyInput">Overovací kód:</label>
+                <input type="text" id="verifyKeyInput" required placeholder="Zadajte overovací kód">
+
+                <button type="submit">Overiť email</button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>
