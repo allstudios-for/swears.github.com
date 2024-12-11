@@ -1,1 +1,1 @@
-# swears.github.com
+# swears.github.io
